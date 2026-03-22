@@ -16,7 +16,7 @@ use terminal::{
     IndexedCell, Terminal, TerminalBounds, TerminalContent,
     alacritty_terminal::{
         grid::Dimensions,
-        index::{Column as AlacColumn, Point as AlacPoint},
+        index::Point as AlacPoint,
         term::{TermMode, cell::Flags},
         vte::ansi::{
             Color::{self as AnsiColor, Named},
@@ -25,7 +25,6 @@ use terminal::{
     },
     terminal_settings::TerminalSettings,
 };
-use unicode_bidi::BidiInfo;
 use theme::{ActiveTheme, Theme, ThemeSettings};
 use ui::utils::ensure_minimum_contrast;
 use ui::{ParentElement, Tooltip};
@@ -88,6 +87,7 @@ pub struct BatchedTextRun {
     pub cell_count: usize,
     pub style: TextRun,
     pub font_size: AbsoluteLength,
+    pub contains_rtl: bool,
 }
 
 impl BatchedTextRun {
@@ -105,6 +105,7 @@ impl BatchedTextRun {
             cell_count: 1,
             style,
             font_size,
+            contains_rtl: is_rtl_char(c),
         }
     }
 
@@ -131,6 +132,9 @@ impl BatchedTextRun {
         if counts_cell {
             self.cell_count += 1;
         }
+        if is_rtl_char(c) {
+            self.contains_rtl = true;
+        }
         self.style.len += c.len_utf8();
     }
 
@@ -146,13 +150,22 @@ impl BatchedTextRun {
             origin.y + self.start_point.line as f32 * dimensions.line_height,
         );
 
+        // For RTL text (Arabic, Hebrew), skip force_width so that cosmic_text
+        // can apply proper text shaping (ligatures, contextual forms) and BiDi
+        // reordering via its HarfBuzz-compatible shaper.
+        let force_width = if self.contains_rtl {
+            None
+        } else {
+            Some(dimensions.cell_width)
+        };
+
         let _ = window
             .text_system()
             .shape_line(
                 self.text.clone().into(),
                 self.font_size.to_pixels(window.rem_size()),
                 std::slice::from_ref(&self.style),
-                Some(dimensions.cell_width),
+                force_width,
             )
             .paint(
                 pos,
@@ -362,9 +375,7 @@ impl TerminalElement {
                 batched_runs.push(batch);
             }
 
-            // Collect cells for this line and apply bidi reordering for RTL text
-            let mut line_cells: Vec<IndexedCell> = line.collect();
-            bidi_reorder_line_cells(&mut line_cells);
+            let line_cells: Vec<IndexedCell> = line.collect();
 
             let mut previous_cell_had_extras = false;
 
@@ -1551,64 +1562,6 @@ fn is_rtl_char(c: char) -> bool {
         0xFB50..=0xFDFF |   // Arabic Presentation Forms-A
         0xFE70..=0xFEFF     // Arabic Presentation Forms-B
     )
-}
-
-/// Applies the Unicode Bidirectional Algorithm to reorder cells within a line
-/// so that RTL text (Arabic, Hebrew) is displayed in the correct visual order.
-fn bidi_reorder_line_cells(cells: &mut Vec<IndexedCell>) {
-    if cells.is_empty() {
-        return;
-    }
-
-    // Quick check: skip if no RTL characters are present
-    if !cells.iter().any(|cell| is_rtl_char(cell.c)) {
-        return;
-    }
-
-    // Build the line text from cell characters for bidi analysis.
-    // Include all cells (blank and non-blank) to get correct bidi context.
-    let text: String = cells.iter().map(|cell| cell.c).collect();
-
-    let bidi_info = BidiInfo::new(&text, None);
-    if bidi_info.paragraphs.is_empty() {
-        return;
-    }
-
-    let para = &bidi_info.paragraphs[0];
-    let line_range = para.range.clone();
-    let (_, runs) = bidi_info.visual_runs(para, line_range);
-
-    // Build mapping from visual position to logical (original) char index.
-    // Each run from visual_runs is a byte range in the original text, returned in visual order.
-    // For RTL runs (odd level), the characters within are reversed.
-    let mut visual_to_logical: Vec<usize> = Vec::with_capacity(cells.len());
-
-    for run in &runs {
-        // Convert byte range to char indices
-        let start_char_idx = text[..run.start].chars().count();
-        let run_char_count = text[run.clone()].chars().count();
-        let char_indices: Vec<usize> = (0..run_char_count)
-            .map(|i| start_char_idx + i)
-            .collect();
-
-        let level = bidi_info.levels[run.start];
-        if level.is_rtl() {
-            visual_to_logical.extend(char_indices.into_iter().rev());
-        } else {
-            visual_to_logical.extend(char_indices);
-        }
-    }
-
-    // Reorder cells: place each cell at its visual position
-    let original_cells = cells.clone();
-    cells.clear();
-    for (visual_col, &logical_idx) in visual_to_logical.iter().enumerate() {
-        if logical_idx < original_cells.len() {
-            let mut cell = original_cells[logical_idx].clone();
-            cell.point.column = AlacColumn(visual_col);
-            cells.push(cell);
-        }
-    }
 }
 
 pub fn is_blank(cell: &IndexedCell) -> bool {
