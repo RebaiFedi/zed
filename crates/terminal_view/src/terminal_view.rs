@@ -1414,24 +1414,32 @@ impl Item for TerminalView {
             .unwrap_or_else(|| terminal.title(true));
 
         let (icon, icon_color, rerun_button) = match terminal.task() {
-            Some(terminal_task) => match &terminal_task.status {
-                TaskStatus::Running => (
-                    IconName::PlayFilled,
-                    Color::Disabled,
-                    TerminalView::rerun_button(terminal_task),
-                ),
-                TaskStatus::Unknown => (
-                    IconName::Warning,
-                    Color::Warning,
-                    TerminalView::rerun_button(terminal_task),
-                ),
-                TaskStatus::Completed { success } => {
-                    let rerun_button = TerminalView::rerun_button(terminal_task);
+            Some(terminal_task) => {
+                let ai_icon = match terminal_task.spawned_task.label.as_str() {
+                    "Claude Code" => Some(IconName::AiClaude),
+                    "Codex" => Some(IconName::AiOpenAi),
+                    "Gemini" => Some(IconName::AiGemini),
+                    _ => None,
+                };
+                match &terminal_task.status {
+                    TaskStatus::Running => (
+                        ai_icon.unwrap_or(IconName::PlayFilled),
+                        if ai_icon.is_some() { Color::Default } else { Color::Disabled },
+                        TerminalView::rerun_button(terminal_task),
+                    ),
+                    TaskStatus::Unknown => (
+                        ai_icon.unwrap_or(IconName::Warning),
+                        if ai_icon.is_some() { Color::Default } else { Color::Warning },
+                        TerminalView::rerun_button(terminal_task),
+                    ),
+                    TaskStatus::Completed { success } => {
+                        let rerun_button = TerminalView::rerun_button(terminal_task);
 
-                    if *success {
-                        (IconName::Check, Color::Success, rerun_button)
-                    } else {
-                        (IconName::XCircle, Color::Error, rerun_button)
+                        if *success {
+                            (ai_icon.unwrap_or(IconName::Check), if ai_icon.is_some() { Color::Default } else { Color::Success }, rerun_button)
+                        } else {
+                            (ai_icon.unwrap_or(IconName::XCircle), if ai_icon.is_some() { Color::Default } else { Color::Error }, rerun_button)
+                        }
                     }
                 }
             },
@@ -1803,17 +1811,25 @@ impl SerializableItem for TerminalView {
         cx: &mut Context<Self>,
     ) -> Option<Task<anyhow::Result<()>>> {
         let terminal = self.terminal().read(cx);
-        if terminal.task().is_some() {
-            return None;
-        }
 
-        if !self.needs_serialize {
+        // For CLI task terminals (Claude Code, Codex, Gemini), save the task
+        // label as custom_title so we can restore them on next launch.
+        let custom_title = if let Some(task) = terminal.task() {
+            let label = &task.spawned_task.label;
+            match label.as_str() {
+                "Claude Code" | "Codex" | "Gemini" => Some(label.clone()),
+                _ => return None, // Don't serialize other task terminals
+            }
+        } else {
+            self.custom_title.clone()
+        };
+
+        if !self.needs_serialize && terminal.task().is_none() {
             return None;
         }
 
         let workspace_id = self.workspace_id?;
         let cwd = terminal.working_directory();
-        let custom_title = self.custom_title.clone();
         self.needs_serialize = false;
 
         let db = TerminalDb::global(cx);
@@ -1868,25 +1884,70 @@ impl SerializableItem for TerminalView {
                 .ok()
                 .unwrap_or((None, None));
 
-            let terminal = project
-                .update(cx, |project, cx| project.create_terminal_shell(cwd, cx))
-                .await?;
-            cx.update(|window, cx| {
-                cx.new(|cx| {
-                    let mut view = TerminalView::new(
-                        terminal,
-                        workspace,
-                        Some(workspace_id),
-                        project.downgrade(),
-                        window,
-                        cx,
-                    );
-                    if custom_title.is_some() {
-                        view.custom_title = custom_title;
-                    }
-                    view
+            // Check if this was a CLI terminal (Claude Code, Codex, Gemini)
+            // and restore it by launching the command again.
+            let cli_command = custom_title.as_deref().and_then(|title| match title {
+                "Claude Code" => Some(("claude", vec!["--dangerously-skip-permissions".to_string()])),
+                "Codex" => Some(("codex", vec![])),
+                "Gemini" => Some(("gemini", vec![])),
+                _ => None,
+            });
+
+            if let Some((command, args)) = cli_command {
+                let label = custom_title.clone().unwrap_or_default();
+                let spawn_task = SpawnInTerminal {
+                    id: task::TaskId(format!("launch-{}", command)),
+                    full_label: label.clone(),
+                    label: label.clone(),
+                    command: Some(command.to_string()),
+                    args,
+                    command_label: command.to_string(),
+                    cwd,
+                    use_new_terminal: true,
+                    allow_concurrent_runs: true,
+                    reveal: task::RevealStrategy::Always,
+                    reveal_target: task::RevealTarget::Center,
+                    show_summary: false,
+                    show_command: false,
+                    show_rerun: true,
+                    ..Default::default()
+                };
+                let terminal = project
+                    .update(cx, |project, cx| project.create_terminal_task(spawn_task, cx))
+                    .await?;
+                cx.update(|window, cx| {
+                    cx.new(|cx| {
+                        TerminalView::new(
+                            terminal,
+                            workspace,
+                            Some(workspace_id),
+                            project.downgrade(),
+                            window,
+                            cx,
+                        )
+                    })
                 })
-            })
+            } else {
+                let terminal = project
+                    .update(cx, |project, cx| project.create_terminal_shell(cwd, cx))
+                    .await?;
+                cx.update(|window, cx| {
+                    cx.new(|cx| {
+                        let mut view = TerminalView::new(
+                            terminal,
+                            workspace,
+                            Some(workspace_id),
+                            project.downgrade(),
+                            window,
+                            cx,
+                        );
+                        if custom_title.is_some() {
+                            view.custom_title = custom_title;
+                        }
+                        view
+                    })
+                })
+            }
         })
     }
 }

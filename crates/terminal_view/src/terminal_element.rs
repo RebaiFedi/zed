@@ -4,14 +4,15 @@ use gpui::{
     Element, ElementId, Entity, FocusHandle, Font, FontFeatures, FontStyle, FontWeight,
     GlobalElementId, HighlightStyle, Hitbox, Hsla, InputHandler, InteractiveElement, Interactivity,
     IntoElement, LayoutId, Length, ModifiersChangedEvent, MouseButton, MouseMoveEvent, Pixels,
-    Point, StatefulInteractiveElement, StrikethroughStyle, Styled, TextRun, TextStyle,
-    UTF16Selection, UnderlineStyle, WeakEntity, WhiteSpace, Window, div, fill, point, px, relative,
-    size,
+    Point, SharedString, StatefulInteractiveElement, StrikethroughStyle, Styled, TextRun,
+    TextStyle, UTF16Selection, UnderlineStyle, WeakEntity, WhiteSpace, Window, div, fill, point,
+    px, relative, size,
 };
 use itertools::Itertools;
 use language::CursorShape;
 use settings::Settings;
 use std::time::Instant;
+use unicode_bidi;
 use terminal::{
     IndexedCell, Terminal, TerminalBounds, TerminalContent,
     alacritty_terminal::{
@@ -150,14 +151,10 @@ impl BatchedTextRun {
             origin.y + self.start_point.line as f32 * dimensions.line_height,
         );
 
-        // For RTL text (Arabic, Hebrew), skip force_width so that cosmic_text
-        // can apply proper text shaping (ligatures, contextual forms) and BiDi
-        // reordering via its HarfBuzz-compatible shaper.
-        let force_width = if self.contains_rtl {
-            None
-        } else {
-            Some(dimensions.cell_width)
-        };
+        if self.contains_rtl {
+            self.paint_bidi(origin, dimensions, window, cx);
+            return;
+        }
 
         let _ = window
             .text_system()
@@ -165,7 +162,7 @@ impl BatchedTextRun {
                 self.text.clone().into(),
                 self.font_size.to_pixels(window.rem_size()),
                 std::slice::from_ref(&self.style),
-                force_width,
+                Some(dimensions.cell_width),
             )
             .paint(
                 pos,
@@ -175,6 +172,139 @@ impl BatchedTextRun {
                 window,
                 cx,
             );
+    }
+
+    /// Paint text containing RTL characters with correct visual word order.
+    ///
+    /// Terminal stores characters left-to-right (logical order). For Arabic/Hebrew
+    /// we must reverse the word order so the first word appears on the RIGHT and
+    /// subsequent words appear to the LEFT. We shape each word independently so
+    /// cosmic_text produces correct Arabic ligatures and contextual forms, then
+    /// paint each word at its visual column.
+    fn paint_bidi(
+        &self,
+        origin: Point<Pixels>,
+        dimensions: &TerminalBounds,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        let y = origin.y + self.start_point.line as f32 * dimensions.line_height;
+        let font_size = self.font_size.to_pixels(window.rem_size());
+        let base_col = self.start_point.column as usize;
+
+        // Use unicode_bidi to compute per-character BiDi levels.
+        let bidi_info = unicode_bidi::BidiInfo::new(&self.text, Some(unicode_bidi::Level::ltr()));
+
+        // Build a list of (word_text, char_count, is_space, is_rtl) segments
+        // by splitting on spaces while preserving spacing.
+        let mut segments: Vec<(&str, usize, bool, bool)> = Vec::new();
+        let mut seg_start = 0;
+        let mut in_space = false;
+
+        for (byte_idx, ch) in self.text.char_indices() {
+            let is_sp = ch == ' ';
+            if byte_idx == 0 {
+                in_space = is_sp;
+                continue;
+            }
+            if is_sp != in_space {
+                let seg = &self.text[seg_start..byte_idx];
+                let char_count = seg.chars().count();
+                let seg_has_rtl = seg.chars().any(is_rtl_char);
+                segments.push((seg, char_count, in_space, seg_has_rtl));
+                seg_start = byte_idx;
+                in_space = is_sp;
+            }
+        }
+        // Push the last segment.
+        if seg_start < self.text.len() {
+            let seg = &self.text[seg_start..];
+            let char_count = seg.chars().count();
+            let seg_has_rtl = seg.chars().any(is_rtl_char);
+            segments.push((seg, char_count, in_space, seg_has_rtl));
+        }
+
+        // Determine if the run is predominantly RTL.
+        let rtl_chars: usize = segments
+            .iter()
+            .filter(|(_, _, is_sp, has_rtl)| !is_sp && *has_rtl)
+            .map(|(_, count, _, _)| count)
+            .sum();
+        let total_word_chars: usize = segments
+            .iter()
+            .filter(|(_, _, is_sp, _)| !is_sp)
+            .map(|(_, count, _, _)| count)
+            .sum();
+        let is_predominantly_rtl = rtl_chars > total_word_chars / 2;
+
+        if !is_predominantly_rtl {
+            // Fallback: paint normally with force_width=None for mixed text.
+            let pos = Point::new(
+                origin.x + base_col as f32 * dimensions.cell_width,
+                y,
+            );
+            let _ = window
+                .text_system()
+                .shape_line(
+                    self.text.clone().into(),
+                    font_size,
+                    std::slice::from_ref(&self.style),
+                    None,
+                )
+                .paint(pos, dimensions.line_height, gpui::TextAlign::Left, None, window, cx);
+            return;
+        }
+
+        // For predominantly RTL text: reverse the segment order so the first
+        // Arabic word ends up on the right and the last word on the left.
+        // This gives the correct right-to-left reading order.
+        segments.reverse();
+
+        // Paint each segment at its visual position.
+        let mut visual_col = 0usize;
+        for (seg_text, char_count, is_space, seg_has_rtl) in &segments {
+            if *is_space {
+                visual_col += char_count;
+                continue;
+            }
+
+            let pos = Point::new(
+                origin.x + (base_col + visual_col) as f32 * dimensions.cell_width,
+                y,
+            );
+
+            let style = TextRun {
+                len: seg_text.len(),
+                ..self.style.clone()
+            };
+
+            // RTL segments get force_width=None for proper Arabic shaping.
+            // LTR segments get force_width for grid alignment.
+            let force_width = if *seg_has_rtl {
+                None
+            } else {
+                Some(dimensions.cell_width)
+            };
+
+            let _ = window
+                .text_system()
+                .shape_line(
+                    SharedString::from(seg_text.to_string()),
+                    font_size,
+                    std::slice::from_ref(&style),
+                    force_width,
+                )
+                .paint(
+                    pos,
+                    dimensions.line_height,
+                    gpui::TextAlign::Left,
+                    None,
+                    window,
+                    cx,
+                );
+
+            visual_col += char_count;
+        }
     }
 }
 

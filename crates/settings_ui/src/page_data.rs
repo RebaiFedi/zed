@@ -71,12 +71,8 @@ pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
         search_and_files_page(),
         window_and_layout_page(),
         panels_page(),
-        debugger_page(),
         terminal_page(),
         version_control_page(),
-        collaboration_page(),
-        ai_page(cx),
-        network_page(),
     ]
 }
 

@@ -1750,7 +1750,7 @@
     // Any key-value pairs added to this list will be added to the terminal's
     // environment. Use `:` to separate multiple values.
     "env": {
-      // "KEY": "value1:value2"
+      "SSH_AUTH_SOCK": "/run/user/1000/gcr/ssh"
     },
     // Set the terminal's line height.
     // May take 3 values:
@@ -1821,7 +1821,7 @@
     // Sets the maximum number of lines in the terminal's scrollback buffer.
     // Default: 10_000, maximum: 100_000 (all bigger values set will be treated as 100_000), 0 disables the scrolling.
     // Existing terminals will not pick up this change until they are recreated.
-    "max_scroll_history_lines": 2000,
+    "max_scroll_history_lines": 1000,
     // The multiplier for scrolling speed in the terminal.
     "scroll_multiplier": 1.0,
     // The minimum APCA perceptual contrast between foreground and background colors.

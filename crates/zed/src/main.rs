@@ -569,7 +569,7 @@ fn main() {
 
         zed::init(cx);
         project::Project::init(&client, cx);
-        debugger_ui::init(cx);
+        debugger_ui::init(cx); // Keep for type registration
         debugger_tools::init(cx);
         client::init(&client, cx);
 
@@ -627,10 +627,10 @@ fn main() {
         });
         AppState::set_global(Arc::downgrade(&app_state), cx);
 
-        auto_update::init(client.clone(), cx);
+        // auto_update::init(client.clone(), cx); // Auto-update disabled
         dap_adapters::init(cx);
-        auto_update_ui::init(cx);
-        reliability::init(client.clone(), cx);
+        // auto_update_ui::init(cx); // Auto-update disabled
+        // reliability::init(client.clone(), cx); // Crash reporting disabled
         extension_host::init(
             extension_host_proxy.clone(),
             app_state.fs.clone(),
@@ -647,37 +647,20 @@ fn main() {
             cx.background_executor().clone(),
         );
         command_palette::init(cx);
-        let copilot_chat_configuration = copilot_chat::CopilotChatConfiguration {
-            enterprise_uri: language::language_settings::all_language_settings(None, cx)
-                .edit_predictions
-                .copilot
-                .enterprise_uri
-                .clone(),
-        };
-        copilot_chat::init(
-            app_state.fs.clone(),
-            app_state.client.http_client(),
-            copilot_chat_configuration,
-            cx,
-        );
-
-        copilot_ui::init(&app_state, cx);
-        language_model::init(app_state.user_store.clone(), app_state.client.clone(), cx);
-        language_models::init(app_state.user_store.clone(), app_state.client.clone(), cx);
-        acp_tools::init(cx);
-        zed::telemetry_log::init(cx);
-        zed::remote_debug::init(cx);
-        edit_prediction_ui::init(cx);
-        web_search::init(cx);
-        web_search_providers::init(app_state.client.clone(), app_state.user_store.clone(), cx);
+        // Copilot/AI chat disabled - no connections
+        // copilot_ui disabled
+        language_model::init(app_state.user_store.clone(), app_state.client.clone(), cx); // type registration
+        language_models::init(app_state.user_store.clone(), app_state.client.clone(), cx); // type registration
+        // acp_tools disabled
+        // telemetry_log disabled
+        // remote_debug disabled
+        edit_prediction_ui::init(cx); // type registration only
+        // web_search disabled
+        // web_search_providers disabled
         snippet_provider::init(cx);
-        edit_prediction_registry::init(app_state.client.clone(), app_state.user_store.clone(), cx);
+        edit_prediction_registry::init(app_state.client.clone(), app_state.user_store.clone(), cx); // type registration
         let prompt_builder = PromptBuilder::load(app_state.fs.clone(), stdout_is_a_pty(), cx);
-        project::AgentRegistryStore::init_global(
-            cx,
-            app_state.fs.clone(),
-            app_state.client.http_client(),
-        );
+        // agent_ui panels disabled but keep type registration
         agent_ui::init(
             app_state.fs.clone(),
             app_state.client.clone(),
@@ -686,8 +669,7 @@ fn main() {
             false,
             cx,
         );
-
-        repl::init(app_state.fs.clone(), cx);
+        repl::init(app_state.fs.clone(), cx); // type registration
         recent_projects::init(cx);
         dev_container::init(cx);
 
@@ -695,7 +677,7 @@ fn main() {
 
         editor::init(cx);
         image_viewer::init(cx);
-        repl::notebook::init(cx);
+        repl::notebook::init(cx); // type registration
         diagnostics::init(cx);
 
         audio::init(cx);
@@ -734,7 +716,7 @@ fn main() {
         language_tools::init(cx);
         call::init(app_state.client.clone(), app_state.user_store.clone(), cx);
         notifications::init(app_state.client.clone(), app_state.user_store.clone(), cx);
-        collab_ui::init(&app_state, cx);
+        collab_ui::init(&app_state, cx); // Keep init for type registration, panels removed
         git_ui::init(cx);
         git_graph::init(cx);
         feedback::init(cx);
@@ -744,8 +726,8 @@ fn main() {
         onboarding::init(cx);
         settings_ui::init(cx);
         keymap_editor::init(cx);
-        extensions_ui::init(cx);
-        edit_prediction::init(cx);
+        // extensions_ui::init(cx); // Extensions marketplace disabled
+        edit_prediction::init(cx); // type registration
         inspector_ui::init(app_state.clone(), cx);
         json_schema_store::init(cx);
         miniprofiler_ui::init(*STARTUP_TIME.get().unwrap(), cx);
@@ -796,17 +778,8 @@ fn main() {
             }
         })
         .detach();
-        telemetry::event!(
-            "Settings Changed",
-            setting = "theme",
-            value = cx.theme().name.to_string()
-        );
-        telemetry::event!(
-            "Settings Changed",
-            setting = "keymap",
-            value = BaseKeymap::get_global(cx).to_string()
-        );
-        telemetry.flush_events().detach();
+        // Telemetry events disabled
+        // telemetry.flush_events().detach();
 
         let fs = app_state.fs.clone();
         load_user_themes_in_background(fs.clone(), cx);
@@ -819,11 +792,12 @@ fn main() {
 
         cx.activate(true);
 
-        cx.spawn({
-            let client = app_state.client.clone();
-            async move |cx| authenticate(client, cx).await
-        })
-        .detach_and_log_err(cx);
+        // Auto-authentication disabled - no Zed account connection
+        // cx.spawn({
+        //     let client = app_state.client.clone();
+        //     async move |cx| authenticate(client, cx).await
+        // })
+        // .detach_and_log_err(cx);
 
         let urls: Vec<_> = args
             .paths_or_urls

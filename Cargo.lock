@@ -17499,6 +17499,7 @@ dependencies = [
  "terminal",
  "theme",
  "ui",
+ "unicode-bidi",
  "util",
  "workspace",
  "zed_actions",

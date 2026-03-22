@@ -439,21 +439,7 @@ pub fn initialize_workspace(
             crashes::set_gpu_info(specs);
         }
 
-        let edit_prediction_menu_handle = PopoverMenuHandle::default();
-        let edit_prediction_ui = cx.new(|cx| {
-            edit_prediction_ui::EditPredictionButton::new(
-                app_state.fs.clone(),
-                app_state.user_store.clone(),
-                edit_prediction_menu_handle.clone(),
-                workspace.project().clone(),
-                cx,
-            )
-        });
-        workspace.register_action({
-            move |_, _: &edit_prediction_ui::ToggleMenu, window, cx| {
-                edit_prediction_menu_handle.toggle(window, cx);
-            }
-        });
+        // Edit prediction UI disabled
 
         let search_button = cx.new(|_| search::search_status_button::SearchButton::new());
         let diagnostic_summary =
@@ -491,7 +477,7 @@ pub fn initialize_workspace(
             status_bar.add_left_item(lsp_button, window, cx);
             status_bar.add_left_item(diagnostic_summary, window, cx);
             status_bar.add_left_item(activity_indicator, window, cx);
-            status_bar.add_right_item(edit_prediction_ui, window, cx);
+            // edit_prediction_ui removed
             status_bar.add_right_item(active_buffer_encoding, window, cx);
             status_bar.add_right_item(active_buffer_language, window, cx);
             status_bar.add_right_item(active_toolchain_language, window, cx);
@@ -634,13 +620,8 @@ fn initialize_panels(
         let outline_panel = OutlinePanel::load(workspace_handle.clone(), cx.clone());
         let terminal_panel = TerminalPanel::load(workspace_handle.clone(), cx.clone());
         let git_panel = GitPanel::load(workspace_handle.clone(), cx.clone());
-        let channels_panel =
-            collab_ui::collab_panel::CollabPanel::load(workspace_handle.clone(), cx.clone());
-        let notification_panel = collab_ui::notification_panel::NotificationPanel::load(
-            workspace_handle.clone(),
-            cx.clone(),
-        );
-        let debug_panel = DebugPanel::load(workspace_handle.clone(), cx);
+        // collab panels disabled
+        // debug panel disabled
 
         async fn add_panel_when_ready(
             panel_task: impl Future<Output = anyhow::Result<Entity<impl workspace::Panel>>> + 'static,
@@ -662,10 +643,10 @@ fn initialize_panels(
             add_panel_when_ready(outline_panel, workspace_handle.clone(), cx.clone()),
             add_panel_when_ready(terminal_panel, workspace_handle.clone(), cx.clone()),
             add_panel_when_ready(git_panel, workspace_handle.clone(), cx.clone()),
-            add_panel_when_ready(channels_panel, workspace_handle.clone(), cx.clone()),
-            add_panel_when_ready(notification_panel, workspace_handle.clone(), cx.clone()),
-            add_panel_when_ready(debug_panel, workspace_handle.clone(), cx.clone()),
-            initialize_agent_panel(workspace_handle, prompt_builder, cx.clone()).map(|r| r.log_err()),
+            // channels_panel disabled
+            // notification_panel disabled
+            // debug_panel disabled
+            // agent_panel disabled
         );
 
         anyhow::Ok(())
@@ -1024,24 +1005,6 @@ fn register_actions(
         )
         .register_action(
             |workspace: &mut Workspace,
-             _: &collab_ui::collab_panel::ToggleFocus,
-             window: &mut Window,
-             cx: &mut Context<Workspace>| {
-                workspace.toggle_panel_focus::<collab_ui::collab_panel::CollabPanel>(window, cx);
-            },
-        )
-        .register_action(
-            |workspace: &mut Workspace,
-             _: &collab_ui::notification_panel::ToggleFocus,
-             window: &mut Window,
-             cx: &mut Context<Workspace>| {
-                workspace.toggle_panel_focus::<collab_ui::notification_panel::NotificationPanel>(
-                    window, cx,
-                );
-            },
-        )
-        .register_action(
-            |workspace: &mut Workspace,
              _: &terminal_panel::ToggleFocus,
              window: &mut Window,
              cx: &mut Context<Workspace>| {
@@ -1240,8 +1203,7 @@ fn initialize_pane(
             toolbar.add_item(branch_diff_toolbar, window, cx);
             let commit_view_toolbar = cx.new(|_| CommitViewToolbar::new());
             toolbar.add_item(commit_view_toolbar, window, cx);
-            let agent_diff_toolbar = cx.new(AgentDiffToolbar::new);
-            toolbar.add_item(agent_diff_toolbar, window, cx);
+            // agent_diff_toolbar disabled
             let basedpyright_banner = cx.new(|cx| BasedPyrightBanner::new(workspace, cx));
             toolbar.add_item(basedpyright_banner, window, cx);
             let image_view_toolbar = cx.new(|_| image_viewer::ImageViewToolbarControls::new());

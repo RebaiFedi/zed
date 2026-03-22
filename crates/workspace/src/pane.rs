@@ -4147,17 +4147,26 @@ fn default_render_tab_bar_buttons(
                             .item(
                                 ContextMenuEntry::new("Claude Code")
                                     .icon(IconName::AiClaude)
-                                    .action(LaunchClaudeCode.boxed_clone()),
+                                    .action(LaunchClaudeCode.boxed_clone())
+                                    .handler(|window, cx| {
+                                        window.dispatch_action(LaunchClaudeCode.boxed_clone(), cx);
+                                    }),
                             )
                             .item(
                                 ContextMenuEntry::new("Codex")
                                     .icon(IconName::AiOpenAi)
-                                    .action(LaunchCodex.boxed_clone()),
+                                    .action(LaunchCodex.boxed_clone())
+                                    .handler(|window, cx| {
+                                        window.dispatch_action(LaunchCodex.boxed_clone(), cx);
+                                    }),
                             )
                             .item(
                                 ContextMenuEntry::new("Gemini")
                                     .icon(IconName::AiGemini)
-                                    .action(LaunchGemini.boxed_clone()),
+                                    .action(LaunchGemini.boxed_clone())
+                                    .handler(|window, cx| {
+                                        window.dispatch_action(LaunchGemini.boxed_clone(), cx);
+                                    }),
                             )
                     }))
                 }),
