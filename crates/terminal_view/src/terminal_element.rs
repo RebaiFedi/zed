@@ -16,7 +16,7 @@ use terminal::{
     IndexedCell, Terminal, TerminalBounds, TerminalContent,
     alacritty_terminal::{
         grid::Dimensions,
-        index::Point as AlacPoint,
+        index::{Column as AlacColumn, Point as AlacPoint},
         term::{TermMode, cell::Flags},
         vte::ansi::{
             Color::{self as AnsiColor, Named},
@@ -25,6 +25,7 @@ use terminal::{
     },
     terminal_settings::TerminalSettings,
 };
+use unicode_bidi::BidiInfo;
 use theme::{ActiveTheme, Theme, ThemeSettings};
 use ui::utils::ensure_minimum_contrast;
 use ui::{ParentElement, Tooltip};
@@ -361,9 +362,13 @@ impl TerminalElement {
                 batched_runs.push(batch);
             }
 
+            // Collect cells for this line and apply bidi reordering for RTL text
+            let mut line_cells: Vec<IndexedCell> = line.collect();
+            bidi_reorder_line_cells(&mut line_cells);
+
             let mut previous_cell_had_extras = false;
 
-            for cell in line {
+            for cell in &line_cells {
                 let mut fg = cell.fg;
                 let mut bg = cell.bg;
                 if cell.flags.contains(Flags::INVERSE) {
@@ -403,10 +408,10 @@ impl TerminalElement {
 
                 //Layout current cell text
                 {
-                    if !is_blank(&cell) {
+                    if !is_blank(cell) {
                         cell_count += 1;
                         let cell_style = TerminalElement::cell_style(
-                            &cell,
+                            cell,
                             fg,
                             bg,
                             theme,
@@ -1526,6 +1531,83 @@ impl InputHandler for TerminalInputHandler {
         _cx: &mut App,
     ) -> Option<usize> {
         None
+    }
+}
+
+/// Returns true if the character belongs to an RTL script (Arabic, Hebrew, etc.)
+fn is_rtl_char(c: char) -> bool {
+    matches!(c as u32,
+        0x0590..=0x05FF |   // Hebrew
+        0x0600..=0x06FF |   // Arabic
+        0x0700..=0x074F |   // Syriac
+        0x0750..=0x077F |   // Arabic Supplement
+        0x0780..=0x07BF |   // Thaana
+        0x07C0..=0x07FF |   // NKo
+        0x0800..=0x083F |   // Samaritan
+        0x0840..=0x085F |   // Mandaic
+        0x0860..=0x086F |   // Syriac Supplement
+        0x08A0..=0x08FF |   // Arabic Extended-A
+        0xFB1D..=0xFB4F |   // Hebrew Presentation Forms
+        0xFB50..=0xFDFF |   // Arabic Presentation Forms-A
+        0xFE70..=0xFEFF     // Arabic Presentation Forms-B
+    )
+}
+
+/// Applies the Unicode Bidirectional Algorithm to reorder cells within a line
+/// so that RTL text (Arabic, Hebrew) is displayed in the correct visual order.
+fn bidi_reorder_line_cells(cells: &mut Vec<IndexedCell>) {
+    if cells.is_empty() {
+        return;
+    }
+
+    // Quick check: skip if no RTL characters are present
+    if !cells.iter().any(|cell| is_rtl_char(cell.c)) {
+        return;
+    }
+
+    // Build the line text from cell characters for bidi analysis.
+    // Include all cells (blank and non-blank) to get correct bidi context.
+    let text: String = cells.iter().map(|cell| cell.c).collect();
+
+    let bidi_info = BidiInfo::new(&text, None);
+    if bidi_info.paragraphs.is_empty() {
+        return;
+    }
+
+    let para = &bidi_info.paragraphs[0];
+    let line_range = para.range.clone();
+    let (_, runs) = bidi_info.visual_runs(para, line_range);
+
+    // Build mapping from visual position to logical (original) char index.
+    // Each run from visual_runs is a byte range in the original text, returned in visual order.
+    // For RTL runs (odd level), the characters within are reversed.
+    let mut visual_to_logical: Vec<usize> = Vec::with_capacity(cells.len());
+
+    for run in &runs {
+        // Convert byte range to char indices
+        let start_char_idx = text[..run.start].chars().count();
+        let run_char_count = text[run.clone()].chars().count();
+        let char_indices: Vec<usize> = (0..run_char_count)
+            .map(|i| start_char_idx + i)
+            .collect();
+
+        let level = bidi_info.levels[run.start];
+        if level.is_rtl() {
+            visual_to_logical.extend(char_indices.into_iter().rev());
+        } else {
+            visual_to_logical.extend(char_indices);
+        }
+    }
+
+    // Reorder cells: place each cell at its visual position
+    let original_cells = cells.clone();
+    cells.clear();
+    for (visual_col, &logical_idx) in visual_to_logical.iter().enumerate() {
+        if logical_idx < original_cells.len() {
+            let mut cell = original_cells[logical_idx].clone();
+            cell.point.column = AlacColumn(visual_col);
+            cells.push(cell);
+        }
     }
 }
 
