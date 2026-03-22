@@ -476,6 +476,24 @@ pub struct NewTerminal {
     pub local: bool,
 }
 
+/// Opens Claude Code in a new center terminal tab.
+#[derive(Default, PartialEq, Eq, Clone, Deserialize, JsonSchema, Action)]
+#[action(namespace = workspace)]
+#[serde(deny_unknown_fields)]
+pub struct LaunchClaudeCode;
+
+/// Opens Codex in a new center terminal tab.
+#[derive(Default, PartialEq, Eq, Clone, Deserialize, JsonSchema, Action)]
+#[action(namespace = workspace)]
+#[serde(deny_unknown_fields)]
+pub struct LaunchCodex;
+
+/// Opens Gemini CLI in a new center terminal tab.
+#[derive(Default, PartialEq, Eq, Clone, Deserialize, JsonSchema, Action)]
+#[action(namespace = workspace)]
+#[serde(deny_unknown_fields)]
+pub struct LaunchGemini;
+
 /// Increases size of a currently focused dock by a given amount of pixels.
 #[derive(Clone, PartialEq, Deserialize, JsonSchema, Action)]
 #[action(namespace = workspace)]
