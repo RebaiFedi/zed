@@ -1750,7 +1750,7 @@
     // Any key-value pairs added to this list will be added to the terminal's
     // environment. Use `:` to separate multiple values.
     "env": {
-      "SSH_AUTH_SOCK": "/run/user/1000/gcr/ssh"
+      // "KEY": "value1:value2"
     },
     // Set the terminal's line height.
     // May take 3 values:

@@ -126,6 +126,13 @@ pub fn insert_zed_terminal_env(
     env.insert("TERM".to_string(), "xterm-256color".to_string());
     env.insert("COLORTERM".to_string(), "truecolor".to_string());
     env.insert("TERM_PROGRAM_VERSION".to_string(), version.to_string());
+
+    // Inherit SSH_AUTH_SOCK from the parent process so git push over SSH works.
+    if !env.contains_key("SSH_AUTH_SOCK") {
+        if let Ok(val) = std::env::var("SSH_AUTH_SOCK") {
+            env.insert("SSH_AUTH_SOCK".to_string(), val);
+        }
+    }
 }
 
 ///Upward flowing events, for changing the title and such
