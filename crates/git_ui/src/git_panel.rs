@@ -2351,7 +2351,6 @@ impl GitPanel {
                 .entries
                 .iter()
                 .filter_map(|entry| entry.status_entry())
-                .filter(|status_entry| !status_entry.status.is_created())
                 .map(|status_entry| status_entry.repo_path.clone())
                 .collect::<Vec<_>>();
 

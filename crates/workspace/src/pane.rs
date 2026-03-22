@@ -1,5 +1,6 @@
 use crate::{
-    CloseWindow, NewFile, NewTerminal, OpenInTerminal, OpenOptions, OpenTerminal, OpenVisible,
+    CloseWindow, LaunchClaudeCode, LaunchCodex, LaunchGemini, NewCenterTerminal, NewFile,
+    NewTerminal, OpenInTerminal, OpenOptions, OpenTerminal, OpenVisible,
     SplitDirection, ToggleFileFinder, ToggleProjectSymbols, ToggleZoom, Workspace,
     WorkspaceItemBuilder, ZoomIn, ZoomOut,
     invalid_item_view::InvalidItemView,
@@ -4139,17 +4140,25 @@ fn default_render_tab_bar_buttons(
                             .action("Open File", ToggleFileFinder::default().boxed_clone())
                             .separator()
                             .action(
-                                "Search Project",
-                                DeploySearch {
-                                    replace_enabled: false,
-                                    included_files: None,
-                                    excluded_files: None,
-                                }
-                                .boxed_clone(),
+                                "New Terminal",
+                                NewCenterTerminal::default().boxed_clone(),
                             )
-                            .action("Search Symbols", ToggleProjectSymbols.boxed_clone())
                             .separator()
-                            .action("New Terminal", NewTerminal::default().boxed_clone())
+                            .item(
+                                ContextMenuEntry::new("Claude Code")
+                                    .icon(IconName::AiClaude)
+                                    .action(LaunchClaudeCode.boxed_clone()),
+                            )
+                            .item(
+                                ContextMenuEntry::new("Codex")
+                                    .icon(IconName::AiOpenAi)
+                                    .action(LaunchCodex.boxed_clone()),
+                            )
+                            .item(
+                                ContextMenuEntry::new("Gemini")
+                                    .icon(IconName::AiGemini)
+                                    .action(LaunchGemini.boxed_clone()),
+                            )
                     }))
                 }),
         )

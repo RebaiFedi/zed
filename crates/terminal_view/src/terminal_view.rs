@@ -29,7 +29,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use task::TaskId;
+use task::{SpawnInTerminal, TaskId};
 use terminal::{
     Clear, Copy, Event, HoveredWord, MaybeNavigationTarget, Paste, ScrollLineDown, ScrollLineUp,
     ScrollPageDown, ScrollPageUp, ScrollToBottom, ScrollToTop, ShowCharacterPalette, TaskState,
@@ -52,8 +52,9 @@ use ui::{
 };
 use util::ResultExt;
 use workspace::{
-    CloseActiveItem, DraggedSelection, DraggedTab, NewCenterTerminal, NewTerminal, Pane,
-    ToolbarItemLocation, Workspace, WorkspaceId, delete_unloaded_items,
+    CloseActiveItem, DraggedSelection, DraggedTab, LaunchClaudeCode, LaunchCodex, LaunchGemini,
+    NewCenterTerminal, NewTerminal, Pane, ToolbarItemLocation, Workspace, WorkspaceId,
+    delete_unloaded_items,
     item::{
         HighlightedText, Item, ItemEvent, SerializableItem, TabContentParams, TabTooltipContent,
     },
@@ -105,6 +106,9 @@ pub fn init(cx: &mut App) {
 
     cx.observe_new(|workspace: &mut Workspace, _window, _cx| {
         workspace.register_action(TerminalView::deploy);
+        workspace.register_action(TerminalView::launch_claude_code);
+        workspace.register_action(TerminalView::launch_codex);
+        workspace.register_action(TerminalView::launch_gemini);
     })
     .detach();
     SlashCommandRegistry::global(cx).register_command(TerminalSlashCommand, true);
@@ -218,6 +222,90 @@ impl TerminalView {
             } else {
                 project.create_terminal_shell(working_directory, cx)
             }
+        })
+        .detach_and_log_err(cx);
+    }
+
+    pub fn launch_claude_code(
+        workspace: &mut Workspace,
+        _action: &LaunchClaudeCode,
+        window: &mut Window,
+        cx: &mut Context<Workspace>,
+    ) {
+        Self::launch_command_in_center_terminal(
+            workspace,
+            "Claude Code",
+            "claude",
+            &["--dangerously-skip-permissions"],
+            window,
+            cx,
+        );
+    }
+
+    pub fn launch_codex(
+        workspace: &mut Workspace,
+        _action: &LaunchCodex,
+        window: &mut Window,
+        cx: &mut Context<Workspace>,
+    ) {
+        Self::launch_command_in_center_terminal(
+            workspace,
+            "Codex",
+            "codex",
+            &[],
+            window,
+            cx,
+        );
+    }
+
+    pub fn launch_gemini(
+        workspace: &mut Workspace,
+        _action: &LaunchGemini,
+        window: &mut Window,
+        cx: &mut Context<Workspace>,
+    ) {
+        Self::launch_command_in_center_terminal(
+            workspace,
+            "Gemini",
+            "gemini",
+            &[],
+            window,
+            cx,
+        );
+    }
+
+    fn launch_command_in_center_terminal(
+        workspace: &mut Workspace,
+        label: &str,
+        command: &str,
+        args: &[&str],
+        window: &mut Window,
+        cx: &mut Context<Workspace>,
+    ) {
+        let working_directory = default_working_directory(workspace, cx);
+        let spawn_task = SpawnInTerminal {
+            id: TaskId(format!("launch-{}", command)),
+            full_label: label.to_string(),
+            label: label.to_string(),
+            command: Some(command.to_string()),
+            args: args.iter().map(|a| a.to_string()).collect(),
+            command_label: format!(
+                "{} {}",
+                command,
+                args.join(" ")
+            ),
+            cwd: working_directory,
+            use_new_terminal: true,
+            allow_concurrent_runs: true,
+            reveal: task::RevealStrategy::Always,
+            reveal_target: task::RevealTarget::Center,
+            show_summary: false,
+            show_command: false,
+            show_rerun: true,
+            ..Default::default()
+        };
+        TerminalPanel::add_center_terminal(workspace, window, cx, move |project, cx| {
+            project.create_terminal_task(spawn_task, cx)
         })
         .detach_and_log_err(cx);
     }
