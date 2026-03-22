@@ -4144,9 +4144,21 @@ fn default_render_tab_bar_buttons(
                                 NewCenterTerminal::default().boxed_clone(),
                             )
                             .separator()
-                            .action("Claude Code", LaunchClaudeCode.boxed_clone())
-                            .action("Codex", LaunchCodex.boxed_clone())
-                            .action("Gemini", LaunchGemini.boxed_clone())
+                            .item(
+                                ContextMenuEntry::new("Claude Code")
+                                    .icon(IconName::AiClaude)
+                                    .action(LaunchClaudeCode.boxed_clone()),
+                            )
+                            .item(
+                                ContextMenuEntry::new("Codex")
+                                    .icon(IconName::AiOpenAi)
+                                    .action(LaunchCodex.boxed_clone()),
+                            )
+                            .item(
+                                ContextMenuEntry::new("Gemini")
+                                    .icon(IconName::AiGemini)
+                                    .action(LaunchGemini.boxed_clone()),
+                            )
                     }))
                 }),
         )
