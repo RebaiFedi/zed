@@ -29,7 +29,7 @@
   // The name of a font to use for rendering text in the editor
   // ".ZedMono" currently aliases to Lilex
   // but this may change in the future.
-  "buffer_font_family": ".ZedMono",
+  "buffer_font_family": "JetBrains Mono",
   // Set the buffer text's font fallbacks, this will be merged with
   // the platform's default fallbacks.
   "buffer_font_fallbacks": null,
@@ -1811,7 +1811,7 @@
     // "font_size": 15,
     // Set the terminal's font family. If this option is not included,
     // the terminal will default to matching the buffer's font family.
-    // "font_family": ".ZedMono",
+    "font_family": "JetBrains Mono",
     // Set the terminal's font fallbacks. If this option is not included,
     // the terminal will default to matching the buffer's font fallbacks.
     // This will be merged with the platform's default font fallbacks
