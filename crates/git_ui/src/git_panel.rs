@@ -5106,7 +5106,7 @@ impl GitPanel {
             StageStatus::Unstaged => ToggleState::Unselected,
             StageStatus::PartiallyStaged => ToggleState::Indeterminate,
         };
-        if self.show_placeholders && !self.has_staged_changes() && !entry.status.is_created() {
+        if self.show_placeholders && !self.has_staged_changes() {
             is_staged = ToggleState::Selected;
         }
 
