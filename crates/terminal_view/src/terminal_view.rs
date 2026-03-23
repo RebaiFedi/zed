@@ -1421,24 +1421,25 @@ impl Item for TerminalView {
                     "Gemini" => Some(IconName::AiGemini),
                     _ => None,
                 };
+                // For CLI tasks, show icon only (no rerun button overlay)
+                let is_ai = ai_icon.is_some();
                 match &terminal_task.status {
                     TaskStatus::Running => (
                         ai_icon.unwrap_or(IconName::PlayFilled),
-                        if ai_icon.is_some() { Color::Default } else { Color::Disabled },
-                        TerminalView::rerun_button(terminal_task),
+                        if is_ai { Color::Default } else { Color::Disabled },
+                        if is_ai { None } else { TerminalView::rerun_button(terminal_task) },
                     ),
                     TaskStatus::Unknown => (
                         ai_icon.unwrap_or(IconName::Warning),
-                        if ai_icon.is_some() { Color::Default } else { Color::Warning },
-                        TerminalView::rerun_button(terminal_task),
+                        if is_ai { Color::Default } else { Color::Warning },
+                        if is_ai { None } else { TerminalView::rerun_button(terminal_task) },
                     ),
                     TaskStatus::Completed { success } => {
-                        let rerun_button = TerminalView::rerun_button(terminal_task);
-
+                        let rerun = if is_ai { None } else { TerminalView::rerun_button(terminal_task) };
                         if *success {
-                            (ai_icon.unwrap_or(IconName::Check), if ai_icon.is_some() { Color::Default } else { Color::Success }, rerun_button)
+                            (ai_icon.unwrap_or(IconName::Check), if is_ai { Color::Default } else { Color::Success }, rerun)
                         } else {
-                            (ai_icon.unwrap_or(IconName::XCircle), if ai_icon.is_some() { Color::Default } else { Color::Error }, rerun_button)
+                            (ai_icon.unwrap_or(IconName::XCircle), if is_ai { Color::Default } else { Color::Error }, rerun)
                         }
                     }
                 }
