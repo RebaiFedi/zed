@@ -311,6 +311,27 @@ pub fn git_status_icon(status: FileStatus) -> impl IntoElement {
     GitStatusIcon::new(status)
 }
 
+/// Returns a VSCode-style status letter (M, A, U, D, C) with color.
+pub fn git_status_letter(status: FileStatus) -> impl IntoElement {
+    let (letter, color) = if status.is_conflicted() {
+        ("C", Color::VersionControlConflict)
+    } else if status.is_deleted() {
+        ("D", Color::VersionControlDeleted)
+    } else if status.is_untracked() {
+        ("U", Color::VersionControlAdded)
+    } else if status.is_modified() {
+        ("M", Color::VersionControlModified)
+    } else if status.is_created() {
+        ("A", Color::VersionControlAdded)
+    } else {
+        ("M", Color::VersionControlModified)
+    };
+
+    Label::new(letter)
+        .size(LabelSize::Small)
+        .color(color)
+}
+
 struct RenameBranchModal {
     current_branch: SharedString,
     editor: Entity<Editor>,

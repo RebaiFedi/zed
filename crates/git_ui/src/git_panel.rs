@@ -6,7 +6,7 @@ use crate::project_diff::{self, BranchDiff, Diff, ProjectDiff};
 use crate::remote_output::{self, RemoteAction, SuccessMessage};
 use crate::{branch_picker, picker_prompt, render_remote_button};
 use crate::{
-    file_history_view::FileHistoryView, git_panel_settings::GitPanelSettings, git_status_icon,
+    file_history_view::FileHistoryView, git_panel_settings::GitPanelSettings, git_status_icon, git_status_letter,
     repository_selector::RepositorySelector,
 };
 use agent_settings::AgentSettings;
@@ -5060,11 +5060,7 @@ impl GitPanel {
         let marked = self.marked_entries.contains(&ix);
         let status_style = settings.status_style;
         let status = entry.status;
-        let file_icon = if settings.file_icons {
-            FileIcons::get_icon(entry.repo_path.as_std_path(), cx)
-        } else {
-            None
-        };
+        let file_icon = FileIcons::get_icon(entry.repo_path.as_std_path(), cx);
 
         let has_conflict = status.is_conflicted();
         let is_modified = status.is_modified();
@@ -5141,22 +5137,19 @@ impl GitPanel {
             .min_w_0()
             .flex_1()
             .gap_1()
-            .when(settings.file_icons, |this| {
-                this.child(
-                    file_icon
-                        .map(|file_icon| {
-                            Icon::from_path(file_icon)
-                                .size(IconSize::Small)
-                                .color(Color::Muted)
-                        })
-                        .unwrap_or_else(|| {
-                            Icon::new(IconName::File)
-                                .size(IconSize::Small)
-                                .color(Color::Muted)
-                        }),
-                )
-            })
-            .child(git_status_icon(status))
+            .child(
+                file_icon
+                    .map(|file_icon| {
+                        Icon::from_path(file_icon)
+                            .size(IconSize::Small)
+                            .color(Color::Muted)
+                    })
+                    .unwrap_or_else(|| {
+                        Icon::new(IconName::File)
+                            .size(IconSize::Small)
+                            .color(Color::Muted)
+                    }),
+            )
             .map(|this| {
                 if tree_view {
                     this.pl(px(depth as f32 * TREE_INDENT)).child(
@@ -5205,6 +5198,10 @@ impl GitPanel {
                     ))
                 })
             })
+            .child(
+                div().flex_none().w(px(16.)).flex().items_center().justify_center()
+                    .child(git_status_letter(status))
+            )
             .child(
                 div()
                     .id(checkbox_wrapper_id)
