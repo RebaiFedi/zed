@@ -48,15 +48,15 @@ impl ElevationIndex {
 
             ElevationIndex::ElevatedSurface => vec![
                 BoxShadow {
-                    color: hsla(0., 0., 0., 0.12),
-                    offset: point(px(0.), px(2.)),
-                    blur_radius: px(3.),
+                    color: hsla(0., 0., 0., if is_light { 0.12 } else { 0.28 }),
+                    offset: point(px(0.), px(4.)),
+                    blur_radius: px(12.),
                     spread_radius: px(0.),
                 },
                 BoxShadow {
-                    color: hsla(0., 0., 0., if is_light { 0.03 } else { 0.06 }),
+                    color: hsla(0., 0., 0., if is_light { 0.04 } else { 0.12 }),
                     offset: point(px(0.), px(1.)),
-                    blur_radius: px(0.),
+                    blur_radius: px(3.),
                     spread_radius: px(0.),
                 },
             ],
