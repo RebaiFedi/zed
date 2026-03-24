@@ -324,7 +324,7 @@ pub fn git_status_letter(status: FileStatus) -> impl IntoElement {
     } else if status.is_created() {
         ("A", Color::VersionControlAdded)
     } else {
-        ("M", Color::VersionControlModified)
+        ("?", Color::Muted)
     };
 
     Label::new(letter)

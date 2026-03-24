@@ -6,7 +6,7 @@ use crate::project_diff::{self, BranchDiff, Diff, ProjectDiff};
 use crate::remote_output::{self, RemoteAction, SuccessMessage};
 use crate::{branch_picker, picker_prompt, render_remote_button};
 use crate::{
-    file_history_view::FileHistoryView, git_panel_settings::GitPanelSettings, git_status_icon, git_status_letter,
+    file_history_view::FileHistoryView, git_panel_settings::GitPanelSettings, git_status_letter,
     repository_selector::RepositorySelector,
 };
 use agent_settings::AgentSettings;
@@ -1830,7 +1830,7 @@ impl GitPanel {
         let mut any_staged_or_partially_staged = false;
 
         for descendant in descendants {
-            if show_placeholders && !descendant.status.is_created() {
+            if show_placeholders {
                 fully_staged_count += 1;
                 any_staged_or_partially_staged = true;
             } else {

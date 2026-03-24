@@ -1722,7 +1722,14 @@ impl Item for TerminalView {
 
     fn is_dirty(&self, cx: &App) -> bool {
         match self.terminal.read(cx).task() {
-            Some(task) => task.status == TaskStatus::Running,
+            Some(task) => {
+                // CLI AI tasks (Claude Code, Codex, Gemini) are always "Running"
+                // so don't show the dirty dot for them.
+                match task.spawned_task.label.as_str() {
+                    "Claude Code" | "Codex" | "Gemini" => false,
+                    _ => task.status == TaskStatus::Running,
+                }
+            }
             None => self.has_bell(),
         }
     }
