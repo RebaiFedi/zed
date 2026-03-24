@@ -394,12 +394,12 @@ pub(crate) fn handle_connection_error(err: ConnectionError) -> anyhow::Error {
             anyhow!("X11 connection: Maximum request length exceeded")
         }
         ConnectionError::FdPassingFailed => {
-            panic!("X11 connection: File descriptor passing failed")
+            anyhow!("X11 connection: File descriptor passing failed")
         }
         ConnectionError::ParseError(parse_error) => {
             anyhow!(parse_error).context("Parse error in X11 response")
         }
-        ConnectionError::InsufficientMemory => panic!("X11 connection: Insufficient memory"),
+        ConnectionError::InsufficientMemory => anyhow!("X11 connection: Insufficient memory"),
         ConnectionError::IoError(err) => anyhow!(err).context("X11 connection: IOError"),
         _ => anyhow!(err),
     }
@@ -1614,13 +1614,14 @@ impl PlatformWindow for X11Window {
                 window_id: self.0.x_window,
                 visual_id: inner.visual_id,
             };
-            inner.renderer.recover(&raw_window).unwrap_or_else(|err| {
-                panic!(
+            if let Err(err) = inner.renderer.recover(&raw_window) {
+                log::error!(
                     "GPU device lost and recovery failed. \
                         This may happen after system suspend/resume. \
-                        Please restart the application.\n\nError: {err}"
-                )
-            });
+                        Error: {err}"
+                );
+                return;
+            }
 
             // The current scene references atlas textures that were cleared during recovery.
             // Skip this frame and let the next frame rebuild the scene with fresh textures.

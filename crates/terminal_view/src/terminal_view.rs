@@ -1889,7 +1889,7 @@ impl SerializableItem for TerminalView {
                         .filter(|title| !title.trim().is_empty());
                     (cwd, custom_title)
                 })
-                .ok()
+                .log_err()
                 .unwrap_or((None, None));
 
             // Check if this was a CLI terminal (Claude Code, Codex, Gemini)
@@ -1903,13 +1903,14 @@ impl SerializableItem for TerminalView {
 
             if let Some((command, args)) = cli_command {
                 let label = custom_title.clone().unwrap_or_default();
+                let command_label = format!("{} {}", command, args.join(" ")).trim().to_string();
                 let spawn_task = SpawnInTerminal {
                     id: task::TaskId(format!("launch-{}", command)),
                     full_label: label.clone(),
                     label: label.clone(),
                     command: Some(command.to_string()),
                     args,
-                    command_label: command.to_string(),
+                    command_label,
                     cwd,
                     use_new_terminal: true,
                     allow_concurrent_runs: true,

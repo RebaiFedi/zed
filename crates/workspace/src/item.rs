@@ -74,44 +74,44 @@ pub struct PreviewTabsSettings {
 
 impl Settings for ItemSettings {
     fn from_settings(content: &settings::SettingsContent) -> Self {
-        let tabs = content.tabs.as_ref().unwrap();
+        let tabs = content.tabs.as_ref().expect("tabs settings must exist in default.json");
         Self {
-            git_status: tabs.git_status.unwrap()
+            git_status: tabs.git_status.expect("tabs.git_status must exist")
                 && content
                     .git
                     .as_ref()
-                    .unwrap()
+                    .expect("git settings must exist")
                     .enabled
-                    .unwrap()
+                    .expect("git.enabled must exist")
                     .is_git_status_enabled(),
-            close_position: tabs.close_position.unwrap(),
-            activate_on_close: tabs.activate_on_close.unwrap(),
-            file_icons: tabs.file_icons.unwrap(),
-            show_diagnostics: tabs.show_diagnostics.unwrap(),
-            show_close_button: tabs.show_close_button.unwrap(),
+            close_position: tabs.close_position.expect("tabs.close_position must exist"),
+            activate_on_close: tabs.activate_on_close.expect("tabs.activate_on_close must exist"),
+            file_icons: tabs.file_icons.expect("tabs.file_icons must exist"),
+            show_diagnostics: tabs.show_diagnostics.expect("tabs.show_diagnostics must exist"),
+            show_close_button: tabs.show_close_button.expect("tabs.show_close_button must exist"),
         }
     }
 }
 
 impl Settings for PreviewTabsSettings {
     fn from_settings(content: &settings::SettingsContent) -> Self {
-        let preview_tabs = content.preview_tabs.as_ref().unwrap();
+        let preview_tabs = content.preview_tabs.as_ref().expect("preview_tabs must exist in default.json");
         Self {
-            enabled: preview_tabs.enabled.unwrap(),
+            enabled: preview_tabs.enabled.expect("preview_tabs.enabled must exist"),
             enable_preview_from_project_panel: preview_tabs
                 .enable_preview_from_project_panel
-                .unwrap(),
-            enable_preview_from_file_finder: preview_tabs.enable_preview_from_file_finder.unwrap(),
-            enable_preview_from_multibuffer: preview_tabs.enable_preview_from_multibuffer.unwrap(),
+                .expect("preview_tabs.enable_preview_from_project_panel must exist"),
+            enable_preview_from_file_finder: preview_tabs.enable_preview_from_file_finder.expect("preview_tabs.enable_preview_from_file_finder must exist"),
+            enable_preview_from_multibuffer: preview_tabs.enable_preview_from_multibuffer.expect("preview_tabs.enable_preview_from_multibuffer must exist"),
             enable_preview_multibuffer_from_code_navigation: preview_tabs
                 .enable_preview_multibuffer_from_code_navigation
-                .unwrap(),
+                .expect("preview_tabs.enable_preview_multibuffer_from_code_navigation must exist"),
             enable_preview_file_from_code_navigation: preview_tabs
                 .enable_preview_file_from_code_navigation
-                .unwrap(),
+                .expect("preview_tabs.enable_preview_file_from_code_navigation must exist"),
             enable_keep_preview_on_code_navigation: preview_tabs
                 .enable_keep_preview_on_code_navigation
-                .unwrap(),
+                .expect("preview_tabs.enable_keep_preview_on_code_navigation must exist"),
         }
     }
 }

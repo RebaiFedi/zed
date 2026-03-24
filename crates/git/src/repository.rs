@@ -519,7 +519,9 @@ impl GitExcludeOverride {
         let mut content = self.original_excludes.clone().unwrap_or_default();
 
         content.push_str(Self::START_BLOCK_MARKER);
-        content.push_str(self.added_excludes.as_ref().unwrap());
+        if let Some(excludes) = self.added_excludes.as_ref() {
+            content.push_str(excludes);
+        }
         content.push_str(Self::END_BLOCK_MARKER);
 
         smol::fs::write(&self.git_exclude_path, content).await?;
@@ -1113,8 +1115,8 @@ impl GitRepository for RealGitRepository {
                 .context("starting git cat-file process")?;
 
             let mut files = Vec::<CommitFile>::new();
-            let mut stdin = BufWriter::with_capacity(512, cat_file_process.stdin.take().unwrap());
-            let mut stdout = BufReader::new(cat_file_process.stdout.take().unwrap());
+            let mut stdin = BufWriter::with_capacity(512, cat_file_process.stdin.take().context("git cat-file stdin not available")?);
+            let mut stdout = BufReader::new(cat_file_process.stdout.take().context("git cat-file stdout not available")?);
             let mut info_line = String::new();
             let mut newline = [b'\0'];
             for (path, status_code) in changes {
@@ -1358,7 +1360,7 @@ impl GitRepository for RealGitRepository {
                         .stdin(Stdio::piped())
                         .stdout(Stdio::piped())
                         .spawn()?;
-                    let mut stdin = child.stdin.take().unwrap();
+                    let mut stdin = child.stdin.take().context("git hash-object stdin not available")?;
                     stdin.write_all(content.as_bytes()).await?;
                     stdin.flush().await?;
                     drop(stdin);

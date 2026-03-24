@@ -473,7 +473,7 @@ impl GlobalTheme {
                 themes
                     .get(default_theme(*system_appearance))
                     // fallback for tests.
-                    .unwrap_or_else(|_| themes.get(DEFAULT_DARK_THEME).unwrap())
+                    .unwrap_or_else(|_| themes.get(DEFAULT_DARK_THEME).expect("default dark theme must exist"))
             }
         };
         theme_settings.apply_theme_overrides(theme)
@@ -502,7 +502,7 @@ impl GlobalTheme {
                 if themes.extensions_loaded() {
                     log::error!("{err}");
                 }
-                themes.get_icon_theme(DEFAULT_ICON_THEME_NAME).unwrap()
+                themes.get_icon_theme(DEFAULT_ICON_THEME_NAME).expect("default icon theme must exist")
             }
         }
     }

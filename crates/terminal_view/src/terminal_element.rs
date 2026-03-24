@@ -156,7 +156,7 @@ impl BatchedTextRun {
             return;
         }
 
-        let _ = window
+        window
             .text_system()
             .shape_line(
                 self.text.clone().into(),
@@ -171,7 +171,8 @@ impl BatchedTextRun {
                 None,
                 window,
                 cx,
-            );
+            )
+            .log_err();
     }
 
     /// Paint text containing RTL characters with correct visual word order.
@@ -192,8 +193,6 @@ impl BatchedTextRun {
         let font_size = self.font_size.to_pixels(window.rem_size());
         let base_col = self.start_point.column as usize;
 
-        // Use unicode_bidi to compute per-character BiDi levels.
-        let bidi_info = unicode_bidi::BidiInfo::new(&self.text, Some(unicode_bidi::Level::ltr()));
 
         // Build a list of (word_text, char_count, is_space, is_rtl) segments
         // by splitting on spaces while preserving spacing.
@@ -243,7 +242,7 @@ impl BatchedTextRun {
                 origin.x + base_col as f32 * dimensions.cell_width,
                 y,
             );
-            let _ = window
+            window
                 .text_system()
                 .shape_line(
                     self.text.clone().into(),
@@ -251,7 +250,8 @@ impl BatchedTextRun {
                     std::slice::from_ref(&self.style),
                     None,
                 )
-                .paint(pos, dimensions.line_height, gpui::TextAlign::Left, None, window, cx);
+                .paint(pos, dimensions.line_height, gpui::TextAlign::Left, None, window, cx)
+                .log_err();
             return;
         }
 
@@ -286,7 +286,7 @@ impl BatchedTextRun {
                 Some(dimensions.cell_width)
             };
 
-            let _ = window
+            window
                 .text_system()
                 .shape_line(
                     SharedString::from(seg_text.to_string()),
@@ -301,7 +301,8 @@ impl BatchedTextRun {
                     None,
                     window,
                     cx,
-                );
+                )
+                .log_err();
 
             visual_col += char_count;
         }
@@ -577,7 +578,7 @@ impl TerminalElement {
                                 }
                             } else {
                                 // Flush current batch and start new one
-                                let old_batch = current_batch.take().unwrap();
+                                let Some(old_batch) = current_batch.take() else { continue; };
                                 batched_runs.push(old_batch);
                                 let mut new_batch = BatchedTextRun::new_from_char(
                                     cell_point,
@@ -1024,7 +1025,7 @@ impl Element for TerminalElement {
             window,
             cx,
             |_, _, hitbox, window, cx| {
-                let hitbox = hitbox.unwrap();
+                let hitbox = hitbox.expect("terminal hitbox should always be present");
                 let settings = ThemeSettings::get_global(cx).clone();
 
                 let buffer_font_size = settings.buffer_font_size(cx);
@@ -1105,8 +1106,8 @@ impl Element for TerminalElement {
 
                     let cell_width = text_system
                         .advance(font_id, font_pixels, 'm')
-                        .unwrap()
-                        .width;
+                        .map(|s| s.width)
+                        .unwrap_or(px(8.0));
                     gutter = cell_width;
 
                     let mut size = bounds.size;

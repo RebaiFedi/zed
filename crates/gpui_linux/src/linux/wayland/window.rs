@@ -1349,13 +1349,14 @@ impl PlatformWindow for WaylandWindow {
                     .display_ptr()
                     .cast::<std::ffi::c_void>(),
             };
-            state.renderer.recover(&raw_window).unwrap_or_else(|err| {
-                panic!(
+            if let Err(err) = state.renderer.recover(&raw_window) {
+                log::error!(
                     "GPU device lost and recovery failed. \
                         This may happen after system suspend/resume. \
-                        Please restart the application.\n\nError: {err}"
-                )
-            });
+                        Error: {err}"
+                );
+                return;
+            }
 
             // The current scene references atlas textures that were cleared during recovery.
             // Skip this frame and let the next frame rebuild the scene with fresh textures.

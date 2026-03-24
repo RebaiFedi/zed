@@ -40,7 +40,7 @@ use proto;
 use recent_projects::{RemoteSettings, open_remote_project};
 use release_channel::{AppCommitSha, AppVersion, ReleaseChannel};
 use session::{AppSession, Session};
-use settings::{BaseKeymap, Settings, SettingsStore, watch_config_file};
+use settings::{Settings, SettingsStore, watch_config_file};
 use std::{
     cell::RefCell,
     env,
@@ -578,12 +578,7 @@ fn main() {
         let session = cx.foreground_executor().block_on(session);
 
         let telemetry = client.telemetry();
-        telemetry.start(
-            system_id.as_ref().map(|id| id.to_string()),
-            installation_id.as_ref().map(|id| id.to_string()),
-            session.id().to_owned(),
-            cx,
-        );
+        // telemetry.start disabled - no data collection
         cx.subscribe(&user_store, {
             let telemetry = telemetry.clone();
             move |_, evt: &client::user::Event, _| match evt {
@@ -598,21 +593,7 @@ fn main() {
         })
         .detach();
 
-        // We should rename these in the future to `first app open`, `first app open for release channel`, and `app open`
-        if let (Some(system_id), Some(installation_id)) = (&system_id, &installation_id) {
-            match (&system_id, &installation_id) {
-                (IdType::New(_), IdType::New(_)) => {
-                    telemetry::event!("App First Opened");
-                    telemetry::event!("App First Opened For Release Channel");
-                }
-                (IdType::Existing(_), IdType::New(_)) => {
-                    telemetry::event!("App First Opened For Release Channel");
-                }
-                (_, IdType::Existing(_)) => {
-                    telemetry::event!("App Opened");
-                }
-            }
-        }
+        // Telemetry events disabled
         let app_session = cx.new(|cx| AppSession::new(session, cx));
 
         let app_state = Arc::new(AppState {
@@ -719,7 +700,7 @@ fn main() {
         collab_ui::init(&app_state, cx); // Keep init for type registration, panels removed
         git_ui::init(cx);
         git_graph::init(cx);
-        feedback::init(cx);
+        // feedback::init(cx); // Feedback to Zed disabled
         markdown_preview::init(cx);
         csv_preview::init(cx);
         svg_preview::init(cx);

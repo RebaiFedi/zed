@@ -90,53 +90,53 @@ impl ScrollbarVisibility for ProjectPanelSettings {
 
 impl Settings for ProjectPanelSettings {
     fn from_settings(content: &settings::SettingsContent) -> Self {
-        let project_panel = content.project_panel.clone().unwrap();
+        let project_panel = content.project_panel.clone().expect("project_panel settings must exist");
         Self {
-            button: project_panel.button.unwrap(),
-            hide_gitignore: project_panel.hide_gitignore.unwrap(),
-            default_width: px(project_panel.default_width.unwrap()),
-            dock: project_panel.dock.unwrap(),
-            entry_spacing: project_panel.entry_spacing.unwrap(),
-            file_icons: project_panel.file_icons.unwrap(),
-            folder_icons: project_panel.folder_icons.unwrap(),
-            git_status: project_panel.git_status.unwrap()
+            button: project_panel.button.expect("project_panel.button must exist"),
+            hide_gitignore: project_panel.hide_gitignore.expect("project_panel.hide_gitignore must exist"),
+            default_width: px(project_panel.default_width.expect("project_panel.default_width must exist")),
+            dock: project_panel.dock.expect("project_panel.dock must exist"),
+            entry_spacing: project_panel.entry_spacing.expect("project_panel.entry_spacing must exist"),
+            file_icons: project_panel.file_icons.expect("project_panel.file_icons must exist"),
+            folder_icons: project_panel.folder_icons.expect("project_panel.folder_icons must exist"),
+            git_status: project_panel.git_status.expect("project_panel.git_status must exist")
                 && content
                     .git
                     .as_ref()
-                    .unwrap()
+                    .expect("git settings must exist")
                     .enabled
-                    .unwrap()
+                    .expect("git.enabled must exist")
                     .is_git_status_enabled(),
-            indent_size: project_panel.indent_size.unwrap(),
+            indent_size: project_panel.indent_size.expect("project_panel.indent_size must exist"),
             indent_guides: IndentGuidesSettings {
-                show: project_panel.indent_guides.unwrap().show.unwrap(),
+                show: project_panel.indent_guides.expect("project_panel.indent_guides must exist").show.expect("indent_guides.show must exist"),
             },
-            sticky_scroll: project_panel.sticky_scroll.unwrap(),
-            auto_reveal_entries: project_panel.auto_reveal_entries.unwrap(),
-            auto_fold_dirs: project_panel.auto_fold_dirs.unwrap(),
-            bold_folder_labels: project_panel.bold_folder_labels.unwrap(),
-            starts_open: project_panel.starts_open.unwrap(),
+            sticky_scroll: project_panel.sticky_scroll.expect("project_panel.sticky_scroll must exist"),
+            auto_reveal_entries: project_panel.auto_reveal_entries.expect("project_panel.auto_reveal_entries must exist"),
+            auto_fold_dirs: project_panel.auto_fold_dirs.expect("project_panel.auto_fold_dirs must exist"),
+            bold_folder_labels: project_panel.bold_folder_labels.expect("project_panel.bold_folder_labels must exist"),
+            starts_open: project_panel.starts_open.expect("project_panel.starts_open must exist"),
             scrollbar: {
-                let scrollbar = project_panel.scrollbar.unwrap();
+                let scrollbar = project_panel.scrollbar.expect("project_panel.scrollbar must exist");
                 ScrollbarSettings {
                     show: scrollbar.show.map(Into::into),
-                    horizontal_scroll: scrollbar.horizontal_scroll.unwrap(),
+                    horizontal_scroll: scrollbar.horizontal_scroll.expect("scrollbar.horizontal_scroll must exist"),
                 }
             },
-            show_diagnostics: project_panel.show_diagnostics.unwrap(),
-            hide_root: project_panel.hide_root.unwrap(),
-            hide_hidden: project_panel.hide_hidden.unwrap(),
-            drag_and_drop: project_panel.drag_and_drop.unwrap(),
+            show_diagnostics: project_panel.show_diagnostics.expect("project_panel.show_diagnostics must exist"),
+            hide_root: project_panel.hide_root.expect("project_panel.hide_root must exist"),
+            hide_hidden: project_panel.hide_hidden.expect("project_panel.hide_hidden must exist"),
+            drag_and_drop: project_panel.drag_and_drop.expect("project_panel.drag_and_drop must exist"),
             auto_open: {
-                let auto_open = project_panel.auto_open.unwrap();
+                let auto_open = project_panel.auto_open.expect("project_panel.auto_open must exist");
                 AutoOpenSettings {
-                    on_create: auto_open.on_create.unwrap(),
-                    on_paste: auto_open.on_paste.unwrap(),
-                    on_drop: auto_open.on_drop.unwrap(),
+                    on_create: auto_open.on_create.expect("auto_open.on_create must exist"),
+                    on_paste: auto_open.on_paste.expect("auto_open.on_paste must exist"),
+                    on_drop: auto_open.on_drop.expect("auto_open.on_drop must exist"),
                 }
             },
-            sort_mode: project_panel.sort_mode.unwrap(),
-            diagnostic_badges: project_panel.diagnostic_badges.unwrap(),
+            sort_mode: project_panel.sort_mode.expect("project_panel.sort_mode must exist"),
+            diagnostic_badges: project_panel.diagnostic_badges.expect("project_panel.diagnostic_badges must exist"),
         }
     }
 }

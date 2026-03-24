@@ -1154,7 +1154,7 @@ impl TerminalPanel {
         if self
             .center
             .move_to_border(&self.active_pane, direction, cx)
-            .unwrap()
+            .unwrap_or(false)
         {
             cx.notify();
         }

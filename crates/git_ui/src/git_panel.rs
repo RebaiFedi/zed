@@ -142,7 +142,10 @@ where
     T: IntoEnumIterator + VariantNames + 'static,
 {
     let rx = window.prompt(PromptLevel::Info, msg, detail, T::VARIANTS, cx);
-    cx.spawn(async move |_| Ok(T::iter().nth(rx.await?).unwrap()))
+    cx.spawn(async move |_| {
+        let idx = rx.await?;
+        T::iter().nth(idx).ok_or_else(|| anyhow::anyhow!("invalid prompt selection index: {idx}"))
+    })
 }
 
 #[derive(strum::EnumIter, strum::VariantNames)]
@@ -2090,7 +2093,7 @@ impl GitPanel {
             .buffer()
             .read(cx)
             .as_singleton()
-            .unwrap()
+            .expect("commit editor should always be a singleton buffer")
     }
 
     fn toggle_staged_for_selected(
@@ -2387,7 +2390,7 @@ impl GitPanel {
                     Err(e) => this.show_error_toast("commit", e, cx),
                 }
             })
-            .ok();
+            .log_err();
         });
 
         self.pending_commit = Some(task);

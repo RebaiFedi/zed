@@ -3068,7 +3068,8 @@ impl ProjectPanel {
         let source_entry = source_worktree.read(cx).entry_for_id(source.entry_id)?;
 
         let clipboard_entry_file_name = source_entry.path.file_name()?.to_string();
-        new_path.push(RelPath::unix(&clipboard_entry_file_name).unwrap());
+        let rel_path = RelPath::unix(&clipboard_entry_file_name).log_err()?;
+        new_path.push(rel_path);
 
         let (extension, file_name_without_extension) = if source_entry.is_file() {
             (
@@ -4872,7 +4873,7 @@ impl ProjectPanel {
                                     .leaf_entry_id
                                     .and_then(|entry| self.state.ancestors.get(&entry))
                                 {
-                                    let position = ancestors.ancestors.iter().position(|entry_id| *entry_id == edit_state.entry_id).expect("Edited sub-entry should be an ancestor of selected leaf entry") + 1;
+                                    let position = ancestors.ancestors.iter().position(|entry_id| *entry_id == edit_state.entry_id).expect("edited entry should be an ancestor of leaf entry") + 1;
                                     let all_components = ancestors.ancestors.len();
 
                                     let prefix_components = all_components - position;
